@@ -20,41 +20,27 @@ from __future__ import annotations
 import torch
 
 
-def aggregate(
-    hidden_states: torch.Tensor,
-    attention_mask: torch.Tensor,
-) -> torch.Tensor:
-    """Convert per-token hidden states into a single feature vector.
+import torch
 
-    Args:
-        hidden_states:  Tensor of shape ``(n_layers, seq_len, hidden_dim)``.
-                        Layer index 0 is the token embedding; index -1 is the
-                        final transformer layer.
-        attention_mask: 1-D tensor of shape ``(seq_len,)`` with 1 for real
-                        tokens and 0 for padding.
+def aggregate(hidden_states: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
 
-    Returns:
-        A 1-D feature tensor of shape ``(hidden_dim,)`` or
-        ``(k * hidden_dim,)`` if multiple layers are concatenated.
+    layer_idx = 14
+    device = hidden_states.device
+    layer_data = hidden_states[layer_idx] # (seq_len, hidden_dim)
 
-    Student task:
-        Replace or extend the skeleton below with alternative layer selection,
-        token pooling (mean, max, weighted), or multi-layer fusion strategies.
-    """
-    # ------------------------------------------------------------------
-    # STUDENT: Replace or extend the aggregation below.
-    # ------------------------------------------------------------------
+    real_indices = attention_mask.nonzero()[:, 0]
+    window_size = 20
+    response_indices = real_indices[-window_size:] if len(real_indices) >= window_size else real_indices
+    
+    response_tokens = layer_data[response_indices] # (n_tokens, 896)
+    
+    mean_feat = response_tokens.mean(dim=0)
+    if response_tokens.size(0) > 1:
+        std_feat = response_tokens.std(dim=0)
+    else:
+        std_feat = torch.zeros_like(mean_feat)
 
-    # Default: last real token of the final transformer layer.
-    layer = hidden_states[-1]          # (seq_len, hidden_dim)
-
-    # Find the index of the last real (non-padding) token.
-    real_positions = attention_mask.nonzero(as_tuple=False)  # (n_real, 1)
-    last_pos = int(real_positions[-1].item())                 # scalar index
-
-    feature = layer[last_pos]          # (hidden_dim,)
-
-    return feature
+    return torch.cat([mean_feat, std_feat])
     # ------------------------------------------------------------------
 
 
