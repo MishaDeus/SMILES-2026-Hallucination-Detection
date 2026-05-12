@@ -15,9 +15,19 @@ import torch
 import torch.nn as nn
 from sklearn.metrics import f1_score
 from sklearn.preprocessing import StandardScaler
-
+import random
 
 from sklearn.ensemble import RandomForestClassifier
+
+import random
+
+def seed_everything(seed=42):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+seed_everything(42)
 
 class HallucinationProbe(nn.Module):
     def __init__(self) -> None:
