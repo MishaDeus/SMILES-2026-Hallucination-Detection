@@ -24,15 +24,17 @@ import torch
 
 def aggregate(hidden_states: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
 
-    layer_idx = 14
-    device = hidden_states.device
-    layer_data = hidden_states[layer_idx] # (seq_len, hidden_dim)
+    layer1 = hidden_states[13]
+    layer2 = hidden_states[14]
+    layer3 = hidden_states[15]
+
+    layer_data = (layer1 + layer2 + layer3) / 3.0
 
     real_indices = attention_mask.nonzero()[:, 0]
-    window_size = 20
+    window_size = 19
     response_indices = real_indices[-window_size:] if len(real_indices) >= window_size else real_indices
     
-    response_tokens = layer_data[response_indices] # (n_tokens, 896)
+    response_tokens = layer_data[response_indices]
     
     mean_feat = response_tokens.mean(dim=0)
     if response_tokens.size(0) > 1:
@@ -48,32 +50,33 @@ def extract_geometric_features(
     hidden_states: torch.Tensor,
     attention_mask: torch.Tensor,
 ) -> torch.Tensor:
-    """Extract hand-crafted geometric / statistical features from hidden states.
 
-    Called only when ``USE_GEOMETRIC = True`` in ``solution.ipynb``.  The
-    returned tensor is concatenated with the output of ``aggregate``.
+    device = hidden_states.device
+    real_indices = attention_mask.nonzero()[:, 0]
+    window_size = 19
 
-    Args:
-        hidden_states:  Tensor of shape ``(n_layers, seq_len, hidden_dim)``.
-        attention_mask: 1-D tensor of shape ``(seq_len,)`` with 1 for real
-                        tokens and 0 for padding.
+    response_indices = real_indices[-window_size:] if len(real_indices) >= window_size else real_indices
 
-    Returns:
-        A 1-D float tensor of shape ``(n_geometric_features,)``.  The length
-        must be the same for every sample.
+    response_states = hidden_states[:, response_indices, :]
 
-    Student task:
-        Replace the stub below.  Possible features: layer-wise activation
-        norms, inter-layer cosine similarity (representation drift), or
-        sequence length.
-    """
+    layer_norms = torch.norm(response_states, p=2, dim=-1).mean(dim=-1)
+
+    drift_features = []
+    n_layers = response_states.size(0)
+    
+    for i in range(n_layers - 1):
+        layer_i_mean = response_states[i].mean(dim=0)
+        layer_next_mean = response_states[i+1].mean(dim=0)
+
+        sim = torch.nn.functional.cosine_similarity(layer_i_mean.unsqueeze(0), layer_next_mean.unsqueeze(0))
+        drift_features.append(sim)
+        
+    drift_tensor = torch.cat(drift_features)
+
+    seq_len = torch.tensor([float(len(real_indices))], device=device)
+
+    return torch.cat([layer_norms, drift_tensor, seq_len])
     # ------------------------------------------------------------------
-    # STUDENT: Replace or extend the geometric feature extraction below.
-    # ------------------------------------------------------------------
-
-    # Placeholder: returns an empty tensor (no geometric features).
-    return torch.zeros(0)
-
 
 def aggregation_and_feature_extraction(
     hidden_states: torch.Tensor,
