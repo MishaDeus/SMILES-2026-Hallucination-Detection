@@ -76,7 +76,7 @@ def extract_geometric_features(
     seq_len = torch.tensor([float(len(real_indices))], device=device)
 
     return torch.cat([layer_norms, drift_tensor, seq_len])
-    # ------------------------------------------------------------------
+    # -------------------------------------------------------------------
 
 def aggregation_and_feature_extraction(
     hidden_states: torch.Tensor,
