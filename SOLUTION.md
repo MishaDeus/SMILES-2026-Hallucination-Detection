@@ -10,11 +10,11 @@ All experiments were run in Google Colab T4 GPU; All random seeds were fixed wit
 
 
 
-git clone https://github.com/MishaDeus/SMILES-HALLUCINATION-DETECTION.git
+git clone https://github.com/MishaDeus/SMILES-2026-Hallucination-Detection.git
 
 
 
-cd SMILES-HALLUCINATION-DETECTION
+cd SMILES-2026-Hallucination-Detection
 
 
 
